@@ -1,871 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payroll Tracker</title>
-    <!-- Tailwind CSS for modern styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Font - Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- jsPDF for PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- jsPDF AutoTable plugin for table generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        /* Custom scrollbar for better aesthetics */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background-color: #d1d5db;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background-color: #f3f4f6;
-        }
-        .tab-button {
-            transition: all 0.3s ease;
-        }
-        .tab-button.active {
-            border-bottom: 2px solid #4f46e5;
-            color: #4f46e5;
-            font-weight: 600;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Couple Income & Expense Tracker</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+  h2 { color: #333; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  th { background: #eee; }
+  input, select, button { padding: 5px; margin: 5px; }
+  .dashboard { margin-top: 20px; }
+</style>
 </head>
-<body class="p-4 sm:p-8">
-
-    <div id="app" class="max-w-4xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden min-h-[600px] flex flex-col">
-
-        <!-- Header -->
-        <header class="bg-gray-800 text-white p-4 sm:p-6 text-center shadow-lg rounded-t-2xl">
-            <h1 class="text-xl sm:text-2xl font-bold">Payroll Tracker</h1>
-            <p id="current-month" class="text-sm mt-1 text-gray-300"></p>
-        </header>
-
-        <!-- Tabs -->
-        <div class="flex-shrink-0 flex justify-center bg-gray-100 p-2 sm:p-3 shadow-md rounded-b-xl">
-            <button id="tab-employees" class="tab-button px-4 py-2 mx-1 rounded-lg text-gray-600 hover:bg-gray-200 active">Employees</button>
-            <button id="tab-attendance" class="tab-button px-4 py-2 mx-1 rounded-lg text-gray-600 hover:bg-gray-200">Attendance</button>
-            <button id="tab-summary" class="tab-button px-4 py-2 mx-1 rounded-lg text-gray-600 hover:bg-gray-200">Summary</button>
-        </div>
-        
-        <!-- App Content -->
-        <main class="p-4 sm:p-6 flex-grow overflow-y-auto">
-
-            <!-- Loading & Message Box -->
-            <div id="loading" class="hidden fixed inset-0 bg-white bg-opacity-75 flex justify-center items-center z-50">
-                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
-            </div>
-            <div id="message-box" class="hidden fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-lg shadow-xl z-50"></div>
-
-            <!-- Employee Tab -->
-            <div id="employees-view" class="tab-content">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4">Manage Employees</h2>
-                <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-6">
-                    <h3 class="font-medium text-lg mb-3">Add New Employee</h3>
-                    <form id="add-employee-form" class="space-y-4">
-                        <div>
-                            <label for="employee-name" class="block text-sm font-medium text-gray-700">Name</label>
-                            <input type="text" id="employee-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label for="basic-salary" class="block text-sm font-medium text-gray-700">Basic Salary ($)</label>
-                                <input type="number" id="basic-salary" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
-                            </div>
-                            <div>
-                                <label for="allowances" class="block text-sm font-medium text-gray-700">Allowances ($)</label>
-                                <input type="number" id="allowances" required min="0" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
-                            </div>
-                            <div>
-                                <label for="deductions" class="block text-sm font-medium text-gray-700">Deductions ($)</label>
-                                <input type="number" id="deductions" required min="0" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
-                            </div>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                                Add Employee
-                            </button>
-                            <button type="button" id="generate-jd-btn" class="w-full bg-emerald-500 text-white py-2 px-4 rounded-md hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-200">
-                                Generate Job Description ✨
-                            </button>
-                        </div>
-                    </form>
-                    <div id="job-description-output" class="hidden mt-4 p-4 bg-white border border-gray-200 rounded-lg">
-                        <h4 class="font-semibold text-gray-800 mb-2">Generated Job Description</h4>
-                        <p id="jd-text" class="text-sm text-gray-600 leading-relaxed"></p>
-                    </div>
-                </div>
-                
-                <div id="employee-list-container">
-                    <h3 class="font-medium text-lg mb-3">Employee List</h3>
-                    <div id="employee-list" class="space-y-3">
-                        <!-- Employee items will be rendered here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Attendance Tab -->
-            <div id="attendance-view" class="tab-content hidden">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4">Daily Attendance & OT</h2>
-                <div class="flex items-center space-x-2 mb-4">
-                    <label for="employee-select-attendance" class="text-sm font-medium text-gray-700">Select Employee:</label>
-                    <select id="employee-select-attendance" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 text-sm w-full sm:w-auto">
-                        <!-- Employee options will be rendered here -->
-                    </select>
-                </div>
-                
-                <div id="attendance-calendar" class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-sm mb-6">
-                    <!-- Weekday headers -->
-                    <div class="font-bold text-gray-600">Sun</div>
-                    <div class="font-bold text-gray-600">Mon</div>
-                    <div class="font-bold text-gray-600">Tue</div>
-                    <div class="font-bold text-gray-600">Wed</div>
-                    <div class="font-bold text-gray-600">Thu</div>
-                    <div class="font-bold text-gray-600">Fri</div>
-                    <div class="font-bold text-gray-600">Sat</div>
-                    <!-- Calendar days will be rendered here -->
-                </div>
-                
-                <!-- Modal for attendance input -->
-                <div id="attendance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50 p-4">
-                    <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
-                        <h3 class="text-xl font-semibold mb-4">Attendance for <span id="modal-date-display"></span></h3>
-                        <div class="flex items-center space-x-4 mb-4">
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="status" value="Present" checked class="form-radio text-indigo-600 h-4 w-4">
-                                <span class="ml-2 text-gray-700">Present</span>
-                            </label>
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="status" value="Off" class="form-radio text-indigo-600 h-4 w-4">
-                                <span class="ml-2 text-gray-700">Off</span>
-                            </label>
-                        </div>
-                        <div class="space-y-4">
-                            <div>
-                                <label for="normal-ot" class="block text-sm font-medium text-gray-700">Normal OT (minutes)</label>
-                                <input type="number" id="normal-ot" value="0" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
-                            </div>
-                            <div>
-                                <label for="double-ot" class="block text-sm font-medium text-gray-700">Double OT (minutes)</label>
-                                <input type="number" id="double-ot" value="0" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
-                            </div>
-                        </div>
-                        <div class="flex justify-end space-x-2 mt-6">
-                            <button id="modal-close" type="button" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors duration-200">
-                                Cancel
-                            </button>
-                            <button id="modal-save" type="button" class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-200">
-                                Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Summary Tab -->
-            <div id="summary-view" class="tab-content hidden">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4">Monthly Payroll Summary</h2>
-                <div class="flex justify-between items-center mb-6 flex-col sm:flex-row space-y-4 sm:space-y-0">
-                    <h3 id="total-payroll" class="text-lg font-bold text-gray-800">Total Payroll: $0.00</h3>
-                    <div class="flex space-x-2 w-full sm:w-auto">
-                         <button id="export-pdf-btn" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-200 flex-grow sm:flex-grow-0 flex items-center justify-center space-x-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7zm-1 3a1 1 0 112 0h-2zm4 0a1 1 0 112 0h-2zm-2 0a1 1 0 112 0h-2zm-1-1a1 1 0 100-2h2a1 1 0 100-2H6a1 1 0 100 2h1z" clip-rule="evenodd" />
-                            </svg>
-                            <span>Export PDF</span>
-                        </button>
-                        <button id="draft-email-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors duration-200 flex-grow sm:flex-grow-0 flex items-center justify-center space-x-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                            </svg>
-                            <span>Draft Email ✨</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="summary-table-container">
-                    <table class="w-full table-auto border-collapse border border-gray-300 rounded-lg overflow-hidden shadow-sm">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="p-3 border-r text-left text-sm font-semibold text-gray-700">Employee</th>
-                                <th class="p-3 border-r text-left text-sm font-semibold text-gray-700 hidden sm:table-cell">Days Present</th>
-                                <th class="p-3 border-r text-left text-sm font-semibold text-gray-700 hidden sm:table-cell">Total OT</th>
-                                <th class="p-3 text-left text-sm font-semibold text-gray-700">Total Salary</th>
-                            </tr>
-                        </thead>
-                        <tbody id="summary-table-body" class="divide-y divide-gray-200">
-                            <!-- Summary rows will be rendered here -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <div id="email-draft-output" class="hidden mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <h4 class="font-semibold text-gray-800 mb-2">Generated Email Draft</h4>
-                    <textarea id="email-draft-text" rows="8" class="w-full p-2 text-sm rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                    <button id="copy-email-btn" class="mt-2 bg-indigo-500 text-white py-1 px-3 rounded-md text-sm hover:bg-indigo-600 transition-colors">Copy to Clipboard</button>
-                </div>
-            </div>
-            
-            <!-- User ID Display -->
-            <div class="mt-8 p-4 bg-gray-100 rounded-lg text-sm text-gray-600">
-                <p><strong>Your User ID:</strong> <span id="user-id">Loading...</span></p>
-                <p class="mt-1">Share this ID with others to collaborate on the same data. (Note: Current setup is for a single user, but this ID is essential for data isolation).</p>
-            </div>
-
-        </main>
-    </div>
-
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global variables provided by the canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        let app, db, auth, userId;
-        let employees = {};
-        let attendanceData = {};
-        let activeEmployeeId = null;
-        let selectedDate = null;
-        let isAuthReady = false;
-        
-        // Gemini API configuration
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
-        const API_KEY = ""; // Canvas will provide this in the runtime environment
-
-        // UI Elements
-        const loadingSpinner = document.getElementById('loading');
-        const messageBox = document.getElementById('message-box');
-        const userIdDisplay = document.getElementById('user-id');
-        const employeeForm = document.getElementById('add-employee-form');
-        const employeeList = document.getElementById('employee-list');
-        const employeeSelectAttendance = document.getElementById('employee-select-attendance');
-        const attendanceCalendar = document.getElementById('attendance-calendar');
-        const attendanceModal = document.getElementById('attendance-modal');
-        const modalDateDisplay = document.getElementById('modal-date-display');
-        const normalOtInput = document.getElementById('normal-ot');
-        const doubleOtInput = document.getElementById('double-ot');
-        const summaryTableBody = document.getElementById('summary-table-body');
-        const totalPayrollDisplay = document.getElementById('total-payroll');
-        const exportPdfBtn = document.getElementById('export-pdf-btn');
-        const generateJdBtn = document.getElementById('generate-jd-btn');
-        const jdOutput = document.getElementById('job-description-output');
-        const jdText = document.getElementById('jd-text');
-        const draftEmailBtn = document.getElementById('draft-email-btn');
-        const emailDraftOutput = document.getElementById('email-draft-output');
-        const emailDraftText = document.getElementById('email-draft-text');
-        const copyEmailBtn = document.getElementById('copy-email-btn');
-
-        // Helper function to show a temporary message
-        function showMessage(message, duration = 3000) {
-            messageBox.textContent = message;
-            messageBox.classList.remove('hidden');
-            setTimeout(() => {
-                messageBox.classList.add('hidden');
-            }, duration);
-        }
-
-        // Helper function to show/hide loading spinner
-        function setLoading(isLoading) {
-            loadingSpinner.classList.toggle('hidden', !isLoading);
-        }
-
-        // Function to make a Gemini API call with exponential backoff
-        async function callGeminiApi(prompt) {
-            let retryCount = 0;
-            const maxRetries = 5;
-            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-
-            while (retryCount < maxRetries) {
-                try {
-                    const response = await fetch(`${API_URL}?key=${API_KEY}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        if (response.status === 429) { // Too Many Requests
-                            const delay = Math.pow(2, retryCount) * 1000;
-                            console.warn(`API rate limit exceeded. Retrying in ${delay / 1000}s...`);
-                            await new Promise(res => setTimeout(res, delay));
-                            retryCount++;
-                            continue;
-                        } else {
-                            throw new Error(`API error: ${response.status} ${response.statusText}`);
-                        }
-                    }
-
-                    const result = await response.json();
-                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
-                        return result.candidates[0].content.parts[0].text;
-                    } else {
-                        throw new Error("Invalid response format from Gemini API.");
-                    }
-                } catch (error) {
-                    console.error("Gemini API call failed:", error);
-                    throw error; // Re-throw the error to be caught by the calling function
-                }
-            }
-            throw new Error("Gemini API call failed after multiple retries.");
-        }
-
-        // Initialize Firebase and set up authentication
-        async function initFirebase() {
-            setLoading(true);
-            try {
-                if (Object.keys(firebaseConfig).length > 0) {
-                    app = initializeApp(firebaseConfig);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-
-                    // Use onAuthStateChanged to get the user ID and listen for changes
-                    onAuthStateChanged(auth, async (user) => {
-                        if (user) {
-                            userId = user.uid;
-                            userIdDisplay.textContent = userId;
-                            isAuthReady = true;
-                            // Start listening to data once auth is ready
-                            listenToData();
-                        } else {
-                            userId = crypto.randomUUID(); // Fallback for anonymous user
-                            userIdDisplay.textContent = userId + " (Anonymous)";
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } else {
-                                await signInAnonymously(auth);
-                            }
-                        }
-                    });
-                } else {
-                    showMessage("Firebase config not available. App will not save data.");
-                    setLoading(false);
-                }
-            } catch (error) {
-                console.error("Firebase initialization failed:", error);
-                showMessage("Failed to connect to the database.");
-                setLoading(false);
-            }
-        }
-
-        // Get the correct Firestore collection reference based on user and app ID
-        function getCollectionRef(collectionName) {
-            if (!db || !userId) return null;
-            return collection(db, `artifacts/${appId}/users/${userId}/${collectionName}`);
-        }
-        
-        // --- Data Listeners (Firestore) ---
-        function listenToData() {
-            if (!isAuthReady || !db) {
-                console.log("Auth not ready, skipping data listeners.");
-                return;
-            }
-
-            const employeesRef = getCollectionRef('employees');
-            const attendanceRef = getCollectionRef('attendance');
-
-            if (!employeesRef || !attendanceRef) {
-                showMessage("Cannot access database collections. Check your user ID and permissions.");
-                return;
-            }
-
-            setLoading(true);
-
-            // Listen for real-time changes to the employees collection
-            onSnapshot(employeesRef, (snapshot) => {
-                employees = {};
-                snapshot.forEach(doc => {
-                    employees[doc.id] = doc.data();
-                });
-                renderEmployees();
-                renderEmployeeSelect();
-                renderSummary(); // Re-calculate and render summary on employee change
-                setLoading(false);
-            }, (error) => {
-                console.error("Error listening to employees:", error);
-                showMessage("Error fetching employee data.");
-                setLoading(false);
-            });
-
-            // Listen for real-time changes to the attendance collection
-            onSnapshot(attendanceRef, (snapshot) => {
-                attendanceData = {};
-                snapshot.forEach(doc => {
-                    attendanceData[doc.id] = doc.data();
-                });
-                renderAttendanceCalendar(); // Re-render calendar on attendance change
-                renderSummary(); // Re-calculate and render summary on attendance change
-            }, (error) => {
-                console.error("Error listening to attendance:", error);
-                showMessage("Error fetching attendance data.");
-            });
-        }
-
-        // --- Render Functions ---
-
-        // Render the list of employees
-        function renderEmployees() {
-            employeeList.innerHTML = '';
-            for (const id in employees) {
-                const employee = employees[id];
-                const item = document.createElement('div');
-                item.className = "flex justify-between items-center bg-gray-100 p-4 rounded-lg shadow-sm";
-                item.innerHTML = `
-                    <div class="flex-grow">
-                        <p class="font-semibold text-gray-800">${employee.name}</p>
-                        <p class="text-sm text-gray-500">Salary: $${employee.basicSalary} | Allowances: $${employee.allowances} | Deductions: $${employee.deductions}</p>
-                    </div>
-                    <button class="delete-employee-btn text-red-500 hover:text-red-700 transition-colors duration-200" data-id="${id}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
-                `;
-                employeeList.appendChild(item);
-            }
-        }
-
-        // Populate the employee selection dropdown
-        function renderEmployeeSelect() {
-            employeeSelectAttendance.innerHTML = '';
-            if (Object.keys(employees).length === 0) {
-                employeeSelectAttendance.innerHTML = '<option value="" disabled selected>No employees added yet</option>';
-            } else {
-                for (const id in employees) {
-                    const employee = employees[id];
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = employee.name;
-                    employeeSelectAttendance.appendChild(option);
-                }
-                activeEmployeeId = employeeSelectAttendance.value;
-            }
-            renderAttendanceCalendar();
-        }
-
-        // Render the attendance calendar for the selected employee
-        function renderAttendanceCalendar() {
-            if (!activeEmployeeId) {
-                attendanceCalendar.innerHTML = '<p class="col-span-7 text-center text-gray-500">Please add an employee to track attendance.</p>';
-                return;
-            }
-            
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sunday, 6 = Saturday
-            
-            // Clear previous calendar
-            const dayCells = attendanceCalendar.querySelectorAll('div:not(:nth-child(-n+7))');
-            dayCells.forEach(cell => cell.remove());
-            
-            // Add blank cells for the first days of the week
-            for (let i = 0; i < firstDayOfWeek; i++) {
-                const blankDay = document.createElement('div');
-                blankDay.className = "p-2";
-                attendanceCalendar.appendChild(blankDay);
-            }
-
-            // Render day cells
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dayData = attendanceData[dateKey]?.[activeEmployeeId] || { status: 'Off', normalOt: 0, doubleOt: 0 };
-                const dayCell = document.createElement('div');
-                dayCell.dataset.date = dateKey;
-                dayCell.className = `p-2 rounded-lg cursor-pointer transition-colors duration-200 flex flex-col items-center justify-center text-gray-800 ${dayData.status === 'Present' ? 'bg-green-100 hover:bg-green-200' : 'bg-red-100 hover:bg-red-200'}`;
-
-                dayCell.innerHTML = `
-                    <span class="font-semibold text-lg">${day}</span>
-                    <span class="text-xs text-gray-500">${dayData.status}</span>
-                `;
-                if (dayData.normalOt > 0 || dayData.doubleOt > 0) {
-                    dayCell.innerHTML += `<span class="text-xs text-blue-500 font-medium">OT</span>`;
-                }
-
-                dayCell.addEventListener('click', () => openAttendanceModal(dateKey, dayData));
-                attendanceCalendar.appendChild(dayCell);
-            }
-        }
-
-        // Render the monthly payroll summary table
-        function renderSummary() {
-            summaryTableBody.innerHTML = '';
-            let totalMonthlyPayroll = 0;
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            for (const id in employees) {
-                const employee = employees[id];
-                const calculatedSalary = calculateSalary(employee, id, year, month);
-                totalMonthlyPayroll += calculatedSalary.totalSalary;
-
-                const row = document.createElement('tr');
-                row.className = "hover:bg-gray-50 transition-colors duration-100";
-                row.innerHTML = `
-                    <td class="p-3 border-r text-gray-800 font-medium">${employee.name}</td>
-                    <td class="p-3 border-r text-gray-600 hidden sm:table-cell">${calculatedSalary.daysPresent} / ${daysInMonth}</td>
-                    <td class="p-3 border-r text-gray-600 hidden sm:table-cell">${calculatedSalary.totalOtHours.toFixed(1)} hrs</td>
-                    <td class="p-3 text-gray-800 font-bold">$${calculatedSalary.totalSalary.toFixed(2)}</td>
-                `;
-                summaryTableBody.appendChild(row);
-            }
-            totalPayrollDisplay.textContent = `Total Payroll: $${totalMonthlyPayroll.toFixed(2)}`;
-        }
-
-        // --- Core Logic & Calculations ---
-
-        // Function to calculate an employee's salary for the month
-        function calculateSalary(employee, employeeId, year, month) {
-            let totalNormalOtMinutes = 0;
-            let totalDoubleOtMinutes = 0;
-            let daysPresent = 0;
-
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dayData = attendanceData[dateKey]?.[employeeId];
-
-                if (dayData && dayData.status === 'Present') {
-                    daysPresent++;
-                    totalNormalOtMinutes += dayData.normalOt || 0;
-                    totalDoubleOtMinutes += dayData.doubleOt || 0;
-                }
-            }
-
-            const totalOtHours = (totalNormalOtMinutes + totalDoubleOtMinutes) / 60;
-            
-            // Assume an average work day has 8 hours, and 22 work days in a month.
-            const hourlyRate = (employee.basicSalary / (8 * 22)); 
-            
-            // Assume 1.5x for Normal OT and 2x for Double OT
-            const normalOtPay = (totalNormalOtMinutes / 60) * (hourlyRate * 1.5);
-            const doubleOtPay = (totalDoubleOtMinutes / 60) * (hourlyRate * 2);
-
-            const totalSalary = (parseFloat(employee.basicSalary) + parseFloat(employee.allowances) + normalOtPay + doubleOtPay) - parseFloat(employee.deductions);
-            
-            // Punctuality bonus: 20 if present for all 22 work days
-            const punctualityBonus = (daysPresent >= 22) ? 20 : 0;
-            
-            const finalSalary = totalSalary + punctualityBonus;
-
-            return {
-                daysPresent,
-                totalOtHours,
-                totalSalary: finalSalary
-            };
-        }
-
-        // --- Event Handlers ---
-
-        // Add a new employee to Firestore
-        employeeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('employee-name').value;
-            const basicSalary = document.getElementById('basic-salary').value;
-            const allowances = document.getElementById('allowances').value;
-            const deductions = document.getElementById('deductions').value;
-
-            setLoading(true);
-            try {
-                const employeesRef = getCollectionRef('employees');
-                if (!employeesRef) {
-                    showMessage("Database not initialized. Please try again later.");
-                    setLoading(false);
-                    return;
-                }
-                await addDoc(employeesRef, {
-                    name,
-                    basicSalary: parseFloat(basicSalary),
-                    allowances: parseFloat(allowances),
-                    deductions: parseFloat(deductions)
-                });
-                employeeForm.reset();
-                showMessage(`Successfully added ${name}.`);
-            } catch (error) {
-                console.error("Error adding employee:", error);
-                showMessage("Failed to add employee.");
-            } finally {
-                setLoading(false);
-            }
-        });
-
-        // Delete an employee from Firestore
-        employeeList.addEventListener('click', async (e) => {
-            if (e.target.closest('.delete-employee-btn')) {
-                const employeeId = e.target.closest('.delete-employee-btn').dataset.id;
-                setLoading(true);
-                try {
-                    const employeesRef = getCollectionRef('employees');
-                    if (!employeesRef) {
-                        showMessage("Database not initialized. Please try again later.");
-                        setLoading(false);
-                        return;
-                    }
-                    await deleteDoc(doc(employeesRef, employeeId));
-                    showMessage("Employee deleted successfully.");
-                } catch (error) {
-                    console.error("Error deleting employee:", error);
-                    showMessage("Failed to delete employee.");
-                } finally {
-                    setLoading(false);
-                }
-            }
-        });
-        
-        // Handle tab switching
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabViews = document.querySelectorAll('.tab-content');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabViews.forEach(view => view.classList.add('hidden'));
-
-                button.classList.add('active');
-                const targetViewId = button.id.replace('tab-', '') + '-view';
-                document.getElementById(targetViewId).classList.remove('hidden');
-                
-                // Hide any previous Gemini output when switching tabs
-                jdOutput.classList.add('hidden');
-                emailDraftOutput.classList.add('hidden');
-
-                if (button.id === 'tab-summary') {
-                    renderSummary();
-                } else if (button.id === 'tab-attendance') {
-                    renderAttendanceCalendar();
-                }
-            });
-        });
-
-        // Handle employee change in attendance view
-        employeeSelectAttendance.addEventListener('change', (e) => {
-            activeEmployeeId = e.target.value;
-            renderAttendanceCalendar();
-        });
-
-        // Modal for attendance input
-        function openAttendanceModal(date, data) {
-            if (!activeEmployeeId) return;
-            selectedDate = date;
-            modalDateDisplay.textContent = date;
-            
-            // Set values based on existing data
-            const statusRadio = document.querySelector(`input[name="status"][value="${data.status}"]`);
-            if (statusRadio) statusRadio.checked = true;
-            normalOtInput.value = data.normalOt;
-            doubleOtInput.value = data.doubleOt;
-            
-            attendanceModal.classList.remove('hidden');
-        }
-
-        document.getElementById('modal-close').addEventListener('click', () => {
-            attendanceModal.classList.add('hidden');
-        });
-
-        document.getElementById('modal-save').addEventListener('click', async () => {
-            if (!activeEmployeeId || !selectedDate) return;
-            const status = document.querySelector('input[name="status"]:checked').value;
-            const normalOt = parseInt(normalOtInput.value) || 0;
-            const doubleOt = parseInt(doubleOtInput.value) || 0;
-
-            setLoading(true);
-            try {
-                const attendanceRef = getCollectionRef('attendance');
-                if (!attendanceRef) {
-                     showMessage("Database not initialized. Please try again later.");
-                    setLoading(false);
-                    return;
-                }
-                const docRef = doc(attendanceRef, selectedDate);
-                
-                const attendancePayload = {
-                    [activeEmployeeId]: {
-                        status,
-                        normalOt,
-                        doubleOt
-                    }
-                };
-
-                // Use a transaction to safely update the document
-                await setDoc(docRef, attendancePayload, { merge: true });
-                showMessage("Attendance saved successfully!");
-            } catch (error) {
-                console.error("Error saving attendance:", error);
-                showMessage("Failed to save attendance.");
-            } finally {
-                attendanceModal.classList.add('hidden');
-                setLoading(false);
-            }
-        });
-
-        // New Gemini API Feature 1: Generate a Job Description
-        generateJdBtn.addEventListener('click', async () => {
-            const employeeName = document.getElementById('employee-name').value;
-            if (!employeeName.trim()) {
-                showMessage("Please enter a name or role to generate a job description.");
-                return;
-            }
-
-            setLoading(true);
-            try {
-                jdOutput.classList.add('hidden'); // Hide previous output
-                const prompt = `Write a brief and concise job description for a "${employeeName}" role. The description should include key responsibilities and required skills.`;
-                const generatedText = await callGeminiApi(prompt);
-                
-                jdText.textContent = generatedText;
-                jdOutput.classList.remove('hidden');
-                showMessage("Job description generated!");
-            } catch (error) {
-                showMessage("Failed to generate job description. Please try again.");
-            } finally {
-                setLoading(false);
-            }
-        });
-
-        // New Gemini API Feature 2: Draft a Payroll Summary Email
-        draftEmailBtn.addEventListener('click', async () => {
-            if (Object.keys(employees).length === 0) {
-                showMessage("Please add employees to generate a summary email.");
-                return;
-            }
-
-            setLoading(true);
-            try {
-                emailDraftOutput.classList.add('hidden'); // Hide previous output
-                const totalPayroll = totalPayrollDisplay.textContent.split(': ')[1];
-                const employeeCount = Object.keys(employees).length;
-                const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                
-                const prompt = `Draft a professional email to a manager summarizing the monthly payroll.
-The total payroll for ${currentMonth} is ${totalPayroll}.
-There are ${employeeCount} employees.
-The email should be brief, professional, and suitable for internal communication.`;
-                
-                const generatedText = await callGeminiApi(prompt);
-                
-                emailDraftText.value = generatedText;
-                emailDraftOutput.classList.remove('hidden');
-                showMessage("Email draft generated!");
-            } catch (error) {
-                showMessage("Failed to generate email draft. Please try again.");
-            } finally {
-                setLoading(false);
-            }
-        });
-
-        // Copy email draft to clipboard
-        copyEmailBtn.addEventListener('click', () => {
-            const textarea = document.getElementById('email-draft-text');
-            textarea.select();
-            document.execCommand('copy');
-            showMessage("Email draft copied to clipboard!");
-        });
-
-
-        // Export to PDF using jsPDF
-        exportPdfBtn.addEventListener('click', () => {
-             if (Object.keys(employees).length === 0) {
-                showMessage("Please add employees to export the summary.");
-                return;
-            }
-            if (!window.jspdf || !window.jspdf.jsPDF) {
-                showMessage("PDF library not loaded. Please try refreshing.");
-                return;
-            }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Set font and style
-            doc.setFont('Helvetica');
-            doc.setTextColor(51, 51, 51); // Dark gray
-            
-            let y = 20;
-
-            // Title
-            doc.setFontSize(22);
-            doc.text("Monthly Payroll Summary", 14, y);
-            y += 10;
-            doc.setFontSize(14);
-            doc.text(`Report for: ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`, 14, y);
-            y += 15;
-            
-            // Summary Table
-            const columns = ["Employee", "Days Present", "Total OT (hrs)", "Total Salary ($)"];
-            const data = [];
-            let totalPayroll = 0;
-            
-            for (const id in employees) {
-                const employee = employees[id];
-                const calculatedSalary = calculateSalary(employee, id, new Date().getFullYear(), new Date().getMonth());
-                totalPayroll += calculatedSalary.totalSalary;
-                data.push([
-                    employee.name,
-                    `${calculatedSalary.daysPresent} days`,
-                    calculatedSalary.totalOtHours.toFixed(1),
-                    calculatedSalary.totalSalary.toFixed(2)
-                ]);
-            }
-            
-            // AutoTable plugin for jsPDF
-            doc.autoTable({
-                startY: y,
-                head: [columns],
-                body: data,
-                styles: {
-                    font: 'Helvetica',
-                    fontSize: 10,
-                    cellPadding: 3,
-                    halign: 'left',
-                    valign: 'middle'
-                },
-                headStyles: {
-                    fillColor: [243, 244, 246], // Tailwind gray-100
-                    textColor: [55, 65, 81], // Tailwind gray-700
-                    fontStyle: 'bold'
-                },
-                alternateRowStyles: {
-                    fillColor: [255, 255, 255]
-                }
-            });
-
-            // Get the final Y position after the table
-            const finalY = doc.lastAutoTable.finalY + 10;
-            
-            // Add Total Payroll summary
-            doc.setFontSize(16);
-            doc.setFont("Helvetica", "bold");
-            doc.text(`Total Monthly Payroll: $${totalPayroll.toFixed(2)}`, 14, finalY);
-
-            // Save the PDF
-            doc.save("payroll-summary.pdf");
-            showMessage("Exported to PDF!");
-        });
-
-        // Initial setup
-        document.getElementById('current-month').textContent = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        initFirebase();
-    </script>
+<body>
+
+<h2>Income & Expense Tracker</h2>
+
+<h3>Add Entry</h3>
+<form id="entryForm">
+  <input type="date" id="date" required>
+  <select id="person" required>
+    <option value="Ahmed">Ahmed</option>
+    <option value="Sara">Sara</option>
+    <option value="Both">Both</option>
+  </select>
+  <select id="type" required>
+    <option value="Income">Income</option>
+    <option value="Expense">Expense</option>
+  </select>
+  <input type="text" id="category" placeholder="Category" required>
+  <input type="text" id="description" placeholder="Description">
+  <input type="number" id="amount" placeholder="Amount" required>
+  <button type="submit">Add Entry</button>
+</form>
+
+<h3>Entries</h3>
+<table id="entriesTable">
+  <thead>
+    <tr><th>Date</th><th>Person</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<div class="dashboard">
+<h3>Dashboard</h3>
+<p>Total Income: <span id="totalIncome">0</span></p>
+<p>Total Expense: <span id="totalExpense">0</span></p>
+<p>Net Balance: <span id="netBalance">0</span></p>
+</div>
+
+<script>
+let entries = JSON.parse(localStorage.getItem('entries')) || [];
+
+function saveEntries() {
+  localStorage.setItem('entries', JSON.stringify(entries));
+}
+
+function renderTable() {
+  const tbody = document.querySelector('#entriesTable tbody');
+  tbody.innerHTML = '';
+  let totalIncome = 0;
+  let totalExpense = 0;
+  entries.forEach(e => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${e.date}</td><td>${e.person}</td><td>${e.type}</td><td>${e.category}</td><td>${e.description}</td><td>${e.amount}</td>`;
+    tbody.appendChild(row);
+    if(e.type === 'Income') totalIncome += parseFloat(e.amount);
+    else totalExpense += parseFloat(e.amount);
+  });
+  document.getElementById('totalIncome').textContent = totalIncome;
+  document.getElementById('totalExpense').textContent = totalExpense;
+  document.getElementById('netBalance').textContent = totalIncome - totalExpense;
+}
+
+document.getElementById('entryForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const newEntry = {
+    date: document.getElementById('date').value,
+    person: document.getElementById('person').value,
+    type: document.getElementById('type').value,
+    category: document.getElementById('category').value,
+    description: document.getElementById('description').value,
+    amount: document.getElementById('amount').value
+  };
+  entries.push(newEntry);
+  saveEntries();
+  renderTable();
+  document.getElementById('entryForm').reset();
+});
+
+renderTable();
+</script>
 
 </body>
 </html>
