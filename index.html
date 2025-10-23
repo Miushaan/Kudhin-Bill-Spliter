@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Couple Income & Expense Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
   h2 { color: #333; }
@@ -12,6 +13,9 @@
   th { background: #eee; }
   input, select, button { padding: 5px; margin: 5px; }
   .dashboard { margin-top: 20px; }
+  #entriesTable { display: none; margin-top: 10px; }
+  button.toggleEntries { margin-bottom: 10px; }
+  #dashboardChart { max-width: 300px; max-height: 200px; }
 </style>
 </head>
 <body>
@@ -22,57 +26,99 @@
 <form id="entryForm">
   <input type="date" id="date" required>
   <select id="person" required>
-    <option value="Ahmed">Ahmed</option>
-    <option value="Sara">Sara</option>
-    <option value="Both">Both</option>
+    <option value="Miu">Miu</option>
+    <option value="Raya">Raya</option>
   </select>
   <select id="type" required>
     <option value="Income">Income</option>
     <option value="Expense">Expense</option>
   </select>
-  <input type="text" id="category" placeholder="Category" required>
+  <select id="category" required>
+    <option value="House">House</option>
+    <option value="Transport">Transport</option>
+    <option value="Personal">Personal</option>
+    <option value="General">General</option>
+  </select>
   <input type="text" id="description" placeholder="Description">
   <input type="number" id="amount" placeholder="Amount" required>
   <button type="submit">Add Entry</button>
 </form>
 
-<h3>Entries</h3>
-<table id="entriesTable">
-  <thead>
-    <tr><th>Date</th><th>Person</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th></tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<button class="toggleEntries" onclick="toggleEntries()">Show Entries</button>
+<label for="monthFilter">Filter by Month:</label>
+<input type="month" id="monthFilter">
+<button onclick="resetMonthData()">Reset Month Data</button>
 
-<div class="dashboard">
+<div id="entriesContainer">
+  <h3>Entries</h3>
+  <table id="entriesTable">
+    <thead>
+      <tr><th>Date</th><th>Person</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="dashboard" id="dashboard">
 <h3>Dashboard</h3>
-<p>Total Income: <span id="totalIncome">0</span></p>
-<p>Total Expense: <span id="totalExpense">0</span></p>
-<p>Net Balance: <span id="netBalance">0</span></p>
+<canvas id="dashboardChart"></canvas>
 </div>
 
 <script>
 let entries = JSON.parse(localStorage.getItem('entries')) || [];
+let chart;
+const password = '12247';
 
 function saveEntries() {
   localStorage.setItem('entries', JSON.stringify(entries));
 }
 
+function toggleEntries() {
+  const table = document.getElementById('entriesTable');
+  table.style.display = table.style.display === 'none' ? 'table' : 'none';
+}
+
 function renderTable() {
+  const monthFilter = document.getElementById('monthFilter').value;
+  entries.sort((a,b) => new Date(a.date) - new Date(b.date));
   const tbody = document.querySelector('#entriesTable tbody');
   tbody.innerHTML = '';
-  let totalIncome = 0;
-  let totalExpense = 0;
+
+  let personTotals = {Miu:0, Raya:0};
+
   entries.forEach(e => {
+    if(monthFilter && !e.date.startsWith(monthFilter)) return;
     const row = document.createElement('tr');
     row.innerHTML = `<td>${e.date}</td><td>${e.person}</td><td>${e.type}</td><td>${e.category}</td><td>${e.description}</td><td>${e.amount}</td>`;
     tbody.appendChild(row);
-    if(e.type === 'Income') totalIncome += parseFloat(e.amount);
-    else totalExpense += parseFloat(e.amount);
+
+    if(e.type === 'Income') personTotals[e.person] += parseFloat(e.amount);
+    else personTotals[e.person] -= parseFloat(e.amount);
   });
-  document.getElementById('totalIncome').textContent = totalIncome;
-  document.getElementById('totalExpense').textContent = totalExpense;
-  document.getElementById('netBalance').textContent = totalIncome - totalExpense;
+
+  renderChart(personTotals);
+}
+
+function renderChart(totals) {
+  const ctx = document.getElementById('dashboardChart').getContext('2d');
+  if(chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(totals),
+      datasets: [{
+        label: 'Net Balance',
+        data: Object.values(totals),
+        backgroundColor: ['#4caf50','#f44336']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } },
+      plugins: { legend: { display: false } }
+    }
+  });
 }
 
 document.getElementById('entryForm').addEventListener('submit', e => {
@@ -90,6 +136,18 @@ document.getElementById('entryForm').addEventListener('submit', e => {
   renderTable();
   document.getElementById('entryForm').reset();
 });
+
+document.getElementById('monthFilter').addEventListener('change', renderTable);
+
+function resetMonthData() {
+  const monthFilter = document.getElementById('monthFilter').value;
+  if(!monthFilter) { alert('Select a month to reset.'); return; }
+  const pass = prompt('Enter password to reset this month:');
+  if(pass !== password) { alert('Incorrect password'); return; }
+  entries = entries.filter(e => !e.date.startsWith(monthFilter));
+  saveEntries();
+  renderTable();
+}
 
 renderTable();
 </script>
